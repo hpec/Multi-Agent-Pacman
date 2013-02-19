@@ -60,7 +60,7 @@ class ReflexAgent(Agent):
         newScaredTimes holds the number of moves that each ghost will remain
         scared because of Pacman having eaten a power pellet.
 
-        Print out these variables to see what you're getting, then combine them
+        #print out these variables to see what you're getting, then combine them
         to create a masterful evaluation function.
         """
         # Useful information you can extract from a GameState (pacman.py)
@@ -69,9 +69,9 @@ class ReflexAgent(Agent):
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-        #print newScaredTimes
-        #print dir(newFood)
-        #print "\n\n"
+        ##print newScaredTimes
+        ##print dir(newFood)
+        ##print "\n\n"
         "*** YOUR CODE HERE ***"
         maxint = 1000000
         score = 0
@@ -120,7 +120,7 @@ class ReflexAgent(Agent):
         mindis = maxint
         for i in range(newFood.width):
             for j in range(newFood.height):
-                #print (i, j)
+                ##print (i, j)
                 if newFood[i][j]:
                    mindis = min(mindis, abs(newPos[0]-i)+abs(newPos[1]-j))
         if mindis == maxint:
@@ -193,41 +193,59 @@ class MinimaxAgent(MultiAgentSearchAgent):
         depth = self.depth
 
         def min_value(state, agentIndex, d):
+            #print "Minimizer: "+str(agentIndex)
             v = maxint
             actions = state.getLegalActions(agentIndex)
             next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
             for next_state in next_states:
-                v = min(v, value(next_state, (agentIndex+1)%numAgents, d))
+                tmp = value(next_state, (agentIndex+1)%numAgents, d+1)
+                if tmp!=-maxint and tmp!=maxint:
+                   v = min(v, tmp)
+                #v = min(v, value(next_state, (agentIndex+1)%numAgents, d+1))
+            #print "Agent: "+ str(agentIndex)+" Min: "+str(v)
             return v
         
         def max_value(state, agentIndex, d):
+            #print "Maximizer: "+str(agentIndex)
             v = -maxint
             actions = state.getLegalActions(agentIndex)
             next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
             for next_state in next_states:
-                v = max(v, value(next_state, (agentIndex+1)%numAgents, d))
+                tmp = value(next_state, (agentIndex+1)%numAgents, d+1)
+                if tmp!=maxint:
+                    v = max(v, tmp)
+                #v = min(v, value(next_state, (agentIndex+1)%numAgents, d+1))
+            #print "Agent: "+ str(agentIndex)+" Max: "+str(v)
             return v
         
         def value(state, agentIndex, d):
-            if d >= depth:
+            if state.isWin() or state.isLose() or d > self.depth*numAgents:
+                #print d
+                #print self.evaluationFunction(state)
+                #print
                 return self.evaluationFunction(state)
 
             if agentIndex>0:
                 return min_value(state, agentIndex, d)
             else:
-                return max_value(state, agentIndex, d+1)
+                return max_value(state, agentIndex, d)
 
         bestVal = -maxint
         bestAct = None
 
+        #print "Current Game State: "+str(gameState)
         actions = gameState.getLegalActions()
         for action in actions:
             next_state = gameState.generateSuccessor(0, action)
-            val = value(next_state, 1, 0)
-            if val>bestVal:
+            #print "Doing Minimax Search for "+str(action)
+            val = value(next_state, 1, 2)
+            #print val
+            if val!=maxint and val>bestVal:
                 bestVal = val
                 bestAct = action
 
+        #print bestAct
+        #print bestVal
         
         return bestAct
 

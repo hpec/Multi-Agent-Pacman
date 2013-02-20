@@ -190,18 +190,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         maxint = 1000000
         numAgents = gameState.getNumAgents()
-        depth = self.depth
 
         def min_value(state, agentIndex, d):
             #print "Minimizer: "+str(agentIndex)
             v = maxint
             actions = state.getLegalActions(agentIndex)
+            #if Directions.STOP in actions:
+            #    actions.remove(Directions.STOP)
             next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
             for next_state in next_states:
-                tmp = value(next_state, (agentIndex+1)%numAgents, d+1)
-                if tmp!=-maxint and tmp!=maxint:
-                   v = min(v, tmp)
-                #v = min(v, value(next_state, (agentIndex+1)%numAgents, d+1))
+                v = min(v, value(next_state, (agentIndex+1)%numAgents, d+1))
             #print "Agent: "+ str(agentIndex)+" Min: "+str(v)
             return v
         
@@ -209,20 +207,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
             #print "Maximizer: "+str(agentIndex)
             v = -maxint
             actions = state.getLegalActions(agentIndex)
+            #if Directions.STOP in actions:
+            #    actions.remove(Directions.STOP)
             next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
             for next_state in next_states:
-                tmp = value(next_state, (agentIndex+1)%numAgents, d+1)
-                if tmp!=maxint:
-                    v = max(v, tmp)
-                #v = min(v, value(next_state, (agentIndex+1)%numAgents, d+1))
+                v = max(v, value(next_state, (agentIndex+1)%numAgents, d+1))
             #print "Agent: "+ str(agentIndex)+" Max: "+str(v)
             return v
         
         def value(state, agentIndex, d):
             if state.isWin() or state.isLose() or d > self.depth*numAgents:
-                #print d
-                #print self.evaluationFunction(state)
-                #print
                 return self.evaluationFunction(state)
 
             if agentIndex>0:
@@ -235,6 +229,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
         #print "Current Game State: "+str(gameState)
         actions = gameState.getLegalActions()
+        #if Directions.STOP in actions:
+        #    actions.remove(Directions.STOP)
         for action in actions:
             next_state = gameState.generateSuccessor(0, action)
             #print "Doing Minimax Search for "+str(action)
@@ -243,7 +239,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
             if val!=maxint and val>bestVal:
                 bestVal = val
                 bestAct = action
-
         #print bestAct
         #print bestVal
         

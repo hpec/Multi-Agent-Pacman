@@ -369,7 +369,126 @@ def betterEvaluationFunction(currentGameState):
       DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    score = 0.0
+    maxint = 1000000
+
+
+    gameScore = currentGameState.getScore()
+    
+
+    #successorGameState = currentGameState.generatePacmanSuccessor(action)
+    pacmanPos = currentGameState.getPacmanPosition()
+    capsules = currentGameState.getCapsules()
+    food = currentGameState.getFood()
+    ghostStates = currentGameState.getGhostStates()
+    ghostScaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+    ghostPositions = currentGameState.getGhostPositions()
+    #print ghostScaredTimes
+
+    foodLeft = currentGameState.getNumFood()
+    capsulesLeft = len(capsules)
+    
+    dis = 0
+    directions = [(1,0), (-1,0), (0,1), (0,-1)]
+    scareTimeSum = sum(ghostScaredTimes)
+    
+    #print scareTimeSum
+    #score += scareTimeSum*1000
+    if currentGameState.isWin():
+        #if capsulesLeft!=0:
+            #print "hai mei chi wan ne"
+            #return -maxint
+        #else:
+            return gameScore
+
+    def getdistance(pos1,pos2):
+        return abs(pos1[0]-pos2[0])+abs(pos1[1]-pos2[1])
+        #return pow((pos1[0]-pos2[0]),2)+pow((pos1[1]-pos2[1]),2)
+
+
+    def nearstFoodDis(pos):
+        capDis = 0
+        foodDis = 0
+        ghostDis = 0
+        queue = util.Queue()
+        queue.push((pos[0], pos[1], 0))
+        closed = set()
+        closed.add((pos[0], pos[1]))
+        while not queue.isEmpty():
+            x, y, dis = queue.pop()
+            for dx, dy in directions:
+                newx = x + dx
+                newy = y + dy
+                newpos = (newx, newy)
+                if (newx, newy) not in closed and (newx>=0 and newy>=0 and newx<food.width and newy<food.height) \
+                and not currentGameState.hasWall(newx, newy):
+                    if capDis==0 and newpos in capsules:
+                        capDis = dis+1
+                    if foodDis==0 and currentGameState.hasFood(newx, newy):
+                        foodDis = dis+1
+                    if ghostDis==0 and (newx, newy) in ghostPositions:
+                        ghostDis = dis+1
+                    if (len(capsules)==0 or capDis!=0) and (foodLeft==0 or foodDis!=0):
+                        break
+                    closed.add(newpos)
+                    queue.push((newx, newy, dis+1))
+        return capDis, foodDis, ghostDis
+
+    # print pacmanPos
+    # print food
+    # a=raw_input("Press any key..")
+    # #print capsules
+    # #print food[pacmanPos[0]][pacmanPos[1]]
+    # #print type(food[pacmanPos[0]][pacmanPos[1]])
+    # if food[pacmanPos[0]][pacmanPos[1]]:
+    #     print "Food!"
+    #     score += 3
+
+    # if pacmanPos in capsules: 
+    #     print "Capsule!"
+    #     score += 5
+    
+    capDis, foodDis, ghostDis = nearstFoodDis(pacmanPos)
+
+    #foodDis = min(foodDis, capDis)
+    
+    for i in range(len(ghostPositions)):
+        ghostPosition = ghostPositions[i]
+        ghostScaredTime = ghostScaredTimes[i]
+        tmp = getdistance(pacmanPos, ghostPosition)
+        if ghostScaredTime>0:
+            if tmp<1:
+                score += 200
+                break
+        else:
+            if tmp<1:
+                #score = -maxint
+                break
+        #dis += tmp
+        
+    # mindis = maxint
+    # for i in range(food.width):
+    #     for j in range(food.height):
+    #         ##print (i, j)
+    #         if food[i][j]:
+    #            mindis = min(mindis, abs(pacmanPos[0]-i)+abs(pacmanPos[1]-j))
+    # if mindis == maxint:
+    #     mindis = 0
+    
+    walls = currentGameState.getWalls()
+    wallCount = 0
+    for dx, dy in directions:
+        if walls[pacmanPos[0]+dx][pacmanPos[1]+dy]:
+            wallCount += 1
+
+    if scareTimeSum==0:
+        score += -capsulesLeft*50
+
+    score += gameScore-foodDis-foodLeft/2 #-wallCount*0.001 #mindis*0.5-wallCount*0.25
+    
+
+    return score
+    
 
 # Abbreviation
 better = betterEvaluationFunction
@@ -378,6 +497,10 @@ class ContestAgent(MultiAgentSearchAgent):
     """
       Your agent for the mini-contest
     """
+    def __init__(self, evalFn = 'betterEvaluationFunction', depth = '4'):
+        self.index = 0 # Pacman is always agent index 0
+        self.evaluationFunction = util.lookup(evalFn, globals())
+        self.depth = int(depth)
 
     def getAction(self, gameState):
         """
@@ -388,5 +511,62 @@ class ContestAgent(MultiAgentSearchAgent):
           just make a beeline straight towards Pacman (or away from him if they're scared!)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        maxint = 1000000
+        numAgents = gameState.getNumAgents()
+
+        def min_value(state, alpha, beta, agentIndex, d):
+            #print "Minimizer: "+str(agentIndex)
+            v = maxint
+            actions = state.getLegalActions(agentIndex)
+            #if Directions.STOP in actions:
+            #    actions.remove(Directions.STOP)
+            next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
+            for next_state in next_states:
+                v = min(v, value(next_state, alpha, beta, (agentIndex+1)%numAgents, d+1))
+                if v<alpha: return v
+                beta = min(beta, v)
+            #print "Agent: "+ str(agentIndex)+" Min: "+str(v)
+            return v
+        
+        def max_value(state, alpha, beta, agentIndex, d):
+            #print "Maximizer: "+str(agentIndex)
+            v = -maxint
+            actions = state.getLegalActions(agentIndex)
+            #if Directions.STOP in actions:
+            #    actions.remove(Directions.STOP)
+            next_states = [state.generateSuccessor(agentIndex, action) for action in actions]
+            for next_state in next_states:
+                v = max(v, value(next_state, alpha, beta, (agentIndex+1)%numAgents, d+1))
+                if v>beta: return v
+                alpha = max(alpha, v)
+            #print "Agent: "+ str(agentIndex)+" Max: "+str(v)
+            return v
+        
+        def value(state, alpha, beta, agentIndex, d):
+            if state.isWin() or state.isLose() or d > self.depth*numAgents:
+                return self.evaluationFunction(state)
+            if agentIndex>0:
+                return min_value(state, alpha, beta, agentIndex, d)
+            else:
+                return max_value(state, alpha, beta, agentIndex, d)
+
+        alpha = -maxint
+        beta = maxint
+        bestVal = -maxint
+        bestAct = None
+        actions = gameState.getLegalActions()
+        #if Directions.STOP in actions:
+        #    actions.remove(Directions.STOP)
+        for action in actions:
+            next_state = gameState.generateSuccessor(0, action)
+            #print "Doing Minimax Search for "+str(action)
+            val = value(next_state, alpha, beta, 1, 2)
+            alpha = max(alpha, val)
+            if val>bestVal:
+                bestVal = val
+                bestAct = action
+        #print bestAct
+        #print bestVal
+        
+        return bestAct
 
